@@ -340,7 +340,7 @@ public:
   std::ostream& PutHowtoSequence(std::ostream& os);
   
   // routines for drawing diagrams
-  void BuildDiagrams();
+  void BuildDiagrams(bool);
   static void DrawPaper();
   static void DrawDiagram(RefDgmr& aDgmr, const DgmInfo& aDgm);
   static void PutDiagramCaption(std::ostream& os, const DgmInfo& aDgm);
@@ -562,13 +562,15 @@ private:
     WHOMOVES_L2
   };  
   WhoMoves mWhoMoves;
+  std::string mName;
 
 public: 
-  RefLine_L2L(RefLine* arl1, RefLine* arl2, short iroot);
+  RefLine_L2L(RefLine* arl1, RefLine* arl2, short iroot, std::string aName);
   
   bool UsesImmediate(RefBase* rb) const;
   void SequencePushSelf();
   bool PutHowto(std::ostream& os) const;
+  bool PutName(std::ostream& os) const;
   void DrawSelf(RefStyle rstyle, short ipass) const;
   static void MakeAll(rank_t arank);
 };
@@ -885,7 +887,10 @@ public:
   static void CalcStatistics();
 
   // An example that tests axiom O6.
-  static void MesserCubeRoot(std::ostream& os);
+  static RefLine MesserCubeRoot();
+
+  // routine for folding cycles
+  static RefLine FoldCycle(std::vector<int> cycle, int total, int irank);
 
 private:
   static RefContainer<RefLine> sBasisLines;  // all lines
@@ -1101,6 +1106,8 @@ public:
   // Write to stream
   void PutMarkList(const XYPt& pp, std::vector<RefMark*>& vm);
   void PutLineList(const XYLine& ll, std::vector<RefLine*>& vl);
+  void PutDividedRefList(int total, std::vector<std::pair<int,RefLine*>> vls);
+  void PutLineDiagrams(RefLine* vr);
 
 private:
   std::ostream* mStream;
@@ -1132,6 +1139,7 @@ private:
   void SetLabelStyle(LabelStyle lstyle);
 
   void DecrementOrigin(double d);
+  void MoveOriginRight(double d, double linespace);
   template <class R>
   void PutRefList(const typename R::bare_t& ar, std::vector<R*>& vr);
 };

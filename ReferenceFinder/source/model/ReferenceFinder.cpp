@@ -104,7 +104,7 @@ int ReferenceFinder::sNumTrials = 1000;         // number of test cases total
 string ReferenceFinder::sStatistics;            // holds results of analysis
     
 // Letters that are used for labels for marks and lines.
-char RefLine::sLabels[] = "ABCDEFGHIJ";
+char RefLine::sLabels[] = "ABCDEFGHIJKLMNO";
 char RefMark::sLabels[] = "PQRSTUVWXYZ";
 
 
@@ -427,12 +427,75 @@ void ReferenceFinder::CalcStatistics()
 }
 
 
+// /*****
+// This routine builds Peter Messer's construction of  cube root of 2. Only used
+// for testing, but I'll leave it in here for edification.
+// *****/
+// RefLine ReferenceFinder::MesserCubeRoot()
+// {
+//   // Rank 0: Construct the four edges of the square.
+//   RefLine *be, *le, *re, *te;
+  
+//   ReferenceFinder::sBasisLines.Add(be = new RefLine_Original(
+//     sPaper.mBottomEdge, 0, string("bottom edge")));
+//   ReferenceFinder::sBasisLines.Add(le = new RefLine_Original(
+//     sPaper.mLeftEdge, 0, string("left edge")));
+//   ReferenceFinder::sBasisLines.Add(re = new RefLine_Original(
+//     sPaper.mRightEdge, 0, string("right edge")));
+//   ReferenceFinder::sBasisLines.Add(te = new RefLine_Original
+//     (sPaper.mTopEdge, 0, string("top edge")));
+
+//   // Rank 0: Construct the four corners of the square.
+//   RefMark *blc, *brc, *tlc, *trc;
+  
+//   ReferenceFinder::sBasisMarks.Add(blc = new RefMark_Original(
+//   sPaper.mBotLeft, 0, string("bot left corner")));
+//   ReferenceFinder::sBasisMarks.Add(brc = new RefMark_Original(
+//   sPaper.mBotRight, 0, string("bot right corner")));
+//   ReferenceFinder::sBasisMarks.Add(tlc = new RefMark_Original(
+//   sPaper.mTopLeft, 0, string("top left corner")));
+//   ReferenceFinder::sBasisMarks.Add(trc = new RefMark_Original(
+//   sPaper.mTopRight, 0, string("top right corner")));
+
+//   // Create the endpoints of the two initial fold lines
+//   RefMark *rma1, *rma2, *rmb1, *rmb2;
+//   ReferenceFinder::sBasisMarks.Add(rma1 = new RefMark_Original(XYPt(0, 1./3), 0, 
+//     string("(0, 1/3)")));
+//   ReferenceFinder::sBasisMarks.Add(rma2 = new RefMark_Original(XYPt(1, 1./3), 0, 
+//     string("(1, 1/3)")));
+//   ReferenceFinder::sBasisMarks.Add(rmb1 = new RefMark_Original(XYPt(0, 2./3), 0, 
+//     string("(0, 2/3)")));
+//   ReferenceFinder::sBasisMarks.Add(rmb2 = new RefMark_Original(XYPt(1, 2./3), 0, 
+//     string("(1, 2/3)")));
+
+//   // Create and add the two initial fold lines.
+//   RefLine *rla, *rlb, *rlc;
+//   ReferenceFinder::sBasisLines.Add(rla = new RefLine_C2P_C2P(rma1, rma2));
+//   ReferenceFinder::sBasisLines.Add(rlb = new RefLine_C2P_C2P(rmb1, rmb2));
+  
+//   // Construct the fold line
+//   ReferenceFinder::sBasisLines.Add(rlc = new RefLine_P2L_P2L(brc, le, rma2, rlb, 0));
+//   // RefLine_L2L ll(rlc,re,0);
+
+//   std::vector<RefLine*> folds;
+//   folds.push_back(rlc);
+//   for (int i=0;i<5;i++){
+//     RefLine *nl;
+//     // ReferenceFinder::sBasisLines.Add(nl = new RefLine_L2L(folds[i],(i%2?le:re), i%2,string(cycle[i])+"/"+string(total)));
+//     folds.push_back(nl);
+//   }
+//   // Print the entire sequence
+//   folds[5]->PutHowtoSequence(cout);
+//   return *folds[5];
+// }
+
 /*****
-This routine builds Peter Messer's construction of  cube root of 2. Only used
-for testing, but I'll leave it in here for edification.
+Fold a complete cycle
 *****/
-void ReferenceFinder::MesserCubeRoot(ostream& os)
+RefLine ReferenceFinder::FoldCycle(vector<int> cycle, int total, int irank)
 {
+  //erase the folding sequence
+  RefBase::sSequence.clear();
   // Rank 0: Construct the four edges of the square.
   RefLine *be, *le, *re, *te;
   
@@ -457,32 +520,22 @@ void ReferenceFinder::MesserCubeRoot(ostream& os)
   ReferenceFinder::sBasisMarks.Add(trc = new RefMark_Original(
   sPaper.mTopRight, 0, string("top right corner")));
 
-  // Create the endpoints of the two initial fold lines
-  RefMark *rma1, *rma2, *rmb1, *rmb2;
-  ReferenceFinder::sBasisMarks.Add(rma1 = new RefMark_Original(XYPt(0, 1./3), 0, 
-    string("(0, 1/3)")));
-  ReferenceFinder::sBasisMarks.Add(rma2 = new RefMark_Original(XYPt(1, 1./3), 0, 
-    string("(1, 1/3)")));
-  ReferenceFinder::sBasisMarks.Add(rmb1 = new RefMark_Original(XYPt(0, 2./3), 0, 
-    string("(0, 2/3)")));
-  ReferenceFinder::sBasisMarks.Add(rmb2 = new RefMark_Original(XYPt(1, 2./3), 0, 
-    string("(1, 2/3)")));
+  // Create the initial fold line: first from cycle
+  RefLine *og;
+  XYLine ogl(double(cycle[0])/double(total));
+  ReferenceFinder::sBasisLines.Add(og = new RefLine_Original(ogl, irank, to_string(cycle[0])+"/"+to_string(total)));
 
-  // Create and add the two initial fold lines.
-  RefLine *rla, *rlb;
-  ReferenceFinder::sBasisLines.Add(rla = new RefLine_C2P_C2P(rma1, rma2));
-  ReferenceFinder::sBasisLines.Add(rlb = new RefLine_C2P_C2P(rmb1, rmb2));
-  
-  // Construct the fold line
-  RefLine_P2L_P2L rlc(brc, le, rma2, rlb, 0);
-  
-  // Print the entire sequence
-  rlc.PutHowtoSequence(os);
-  
-  // quit the program
-  exit(1);
+  std::vector<RefLine*> folds;
+  folds.push_back(og);
+  for (size_t i=0;i<cycle.size()-1;i++){
+    RefLine *nl;
+    ReferenceFinder::sBasisLines.Add(nl = new RefLine_L2L(folds[i],(cycle[i]%2?re:le), 0,to_string(cycle[i+1])+"/"+to_string(total)));
+    folds.push_back(nl);
+  }
+  folds.back()->SequencePushSelf();
+  for(auto i:RefBase::sSequence){std::cout<<i<<std::endl;}
+  return *folds.back();
 }
-
 
 #ifdef __MWERKS__
 #pragma mark -
@@ -782,10 +835,11 @@ RefMarks and RefLines are sequentially numbered.
 void RefBase::BuildAndNumberSequence()
 {
   sSequence.clear();
-  SequencePushSelf(); 
+  SequencePushSelf();
   RefMark::ResetCount();
   RefLine::ResetCount();
   for (size_t i = 0; i < sSequence.size(); i++) sSequence[i]->SetIndex();
+
 }
 
 
@@ -805,12 +859,13 @@ Send the full how-to sequence to the given stream.
 *****/
 ostream& RefBase::PutHowtoSequence(ostream& os)
 {
-  BuildAndNumberSequence(); 
+  BuildAndNumberSequence();
+  std::cout<<"random memory addresses:\n";
+  for (auto i: sSequence){cout<<i<<endl;}
   for (size_t i = 0; i < sSequence.size(); i++)
     if (sSequence[i]->PutHowto(os)) os << "." << endl;
   return os;
 }
-    
 
 /*  Notes on diagrams.
 A DgmInfo is a very simple object that contains just a couple of bits of
@@ -832,11 +887,10 @@ Build a set of diagrams that describe how to fold this reference, by
 constructing a list of DgmInfo records (which refer to elements and
 subsequences of sSequence).
 *****/
-void RefBase::BuildDiagrams()
+void RefBase::BuildDiagrams(bool buildSequence = true)
 {
   sDgms.clear();
-  BuildAndNumberSequence();
-  
+  if (buildSequence) {BuildAndNumberSequence();}
   // Now, we need to note which elements of the sequence are action lines;
   // there will be a diagram for each one of these.
   size_t ss = sSequence.size();
@@ -859,8 +913,6 @@ void RefBase::BuildDiagrams()
     id = sDgms[i].iact + 1;
   }
 }
-
-
 /*****
 Draw the paper
 *****/
@@ -1407,11 +1459,24 @@ bool RefLine::PutName(ostream& os) const
   os << "line " << GetLabel()
 #ifdef RF_PUT_KEY_IN_TEXT
     << "[" << mKey << "]"
-#endif // RF_PUT_KEY_IN_TEXT
+#endif // RF_PUT_KEY_IN_TEXT 
   ;
   return true;
 }
 
+bool RefLine_L2L::PutName(ostream& os) const{
+  if (mName.empty()) {
+    os << "line " << GetLabel()
+  #ifdef RF_PUT_KEY_IN_TEXT
+      << "[" << mKey << "]"
+  #endif // RF_PUT_KEY_IN_TEXT 
+    ;
+    return true;
+  } else {
+    os << "line " << mName;
+    return false;
+  }
+}
 
 /*****
 Put the distance between this line and line al to a stream along with the rank
@@ -1910,8 +1975,8 @@ Bring line l1 to line l2.
 Constructor. iroot = 0 or 1.
 *****/
 
-RefLine_L2L::RefLine_L2L(RefLine* arl1, RefLine* arl2, short iroot) : 
-  RefLine(CalcLineRank(arl1, arl2)), rl1(arl1), rl2(arl2)
+RefLine_L2L::RefLine_L2L(RefLine* arl1, RefLine* arl2, short iroot, string aName = "") : 
+  RefLine(CalcLineRank(arl1, arl2)), rl1(arl1), rl2(arl2), mName(aName)
 {     
   // Get references to lines
   XYLine& l1 = rl1->l;
@@ -1972,7 +2037,6 @@ RefLine_L2L::RefLine_L2L(RefLine* arl1, RefLine* arl2, short iroot) :
   // Set the key.
   FinishConstructor();
 }
-
 
 /*****
 Return true if this line uses rb for immediate reference.
@@ -2046,6 +2110,7 @@ bool RefLine_L2L::PutHowto(ostream& os) const
 	}
     os << pa.Chop();
   };
+  // std::cout << os.rdbuf() << "poep!"<<endl;
   return true;
 }
 
@@ -3807,6 +3872,17 @@ void PSStreamDgmr::DecrementOrigin(double d)
   mPSOrigin.y = sPSPageSize.tr.y - d;
 }
 
+/*****
+Move the origin to the right and decrement with linespace when necessary
+*****/
+void PSStreamDgmr::MoveOriginRight(double d, double linespace)
+{
+  mPSOrigin.x += d;
+  if(mPSOrigin.x > sPSPageSize.tr.x){
+    mPSOrigin.x = sPSPageSize.bl.x;
+    DecrementOrigin(linespace);
+  }
+}
   
 /*****
 Draw a set of marks or lines to a PostScript stream, showing distance and rank
@@ -3881,6 +3957,129 @@ void PSStreamDgmr::PutRefList(const typename R::bare_t& ar, vector<R*>& vr)
   (*mStream) << "%%Pages: " << mPSPageCount << endl;
 }
 
+/****
+Stupid helper function for finding a cycle
+*****/
+vector<int> find_cycle(int total, int start){
+  std::cout << "finding cycle for " << total << " starting at " << start << endl;
+  std::vector<int> cycle = {start};
+  int current = (start %2==0)?start/2:(total+start)/2;
+  while (current!=start){
+    cycle.push_back(current);
+    current = (current%2==0)?current/2:(total+current)/2;
+  }
+  return cycle;
+}
+
+/*****
+Specialized version for division into nths
+Draw a set of marks or lines to a PostScript stream, showing distance and rank
+for each sequence.
+*****/
+void PSStreamDgmr::PutDividedRefList(int total, vector<pair<int,RefLine*>> vls)
+{
+  ReferenceFinder::sClarifyVerbalAmbiguities = false;
+  ReferenceFinder::sAxiomsInVerbalDirections = false;
+
+  // Put some comments so our readers are happy 
+  (*mStream) << "%!PS-Adobe-1.0" << endl;
+  (*mStream) << "%%Pages: (atend)" << endl;
+  (*mStream) << "%%EndComments" << endl;
+  (*mStream) << "%%Page: 1 1" << endl;
+  
+  // Set the page number. DecrementOrigin will update it as needed
+  mPSPageCount = 1;
+  
+  // Put some initial setup information 
+  (*mStream) << "1 setlinecap" << endl;
+  (*mStream) << "1 setlinejoin" << endl;
+  
+  // Setup and draw a header. 
+  mPSOrigin.x = sPSPageSize.bl.x;
+  mPSOrigin.y = sPSPageSize.tr.y;
+  (*mStream) << "/Times-Roman findfont 12 scalefont setfont" << endl;
+  (*mStream) << "0 setgray" << endl;
+  DecrementOrigin(12);
+  DrawLabel(XYPt(0), "ReferenceFinder 4.0 by Robert J. Lang, hacky divisionfinder version by Joep Gevaert", LABELSTYLE_NORMAL);
+  
+  // Note the point we're searching for.
+  (*mStream) << "/Times-Roman findfont 9 scalefont setfont" << endl;
+  DecrementOrigin(12);
+  stringstream targstr;
+  targstr << "Paper: \\(" << ReferenceFinder::sPaper.mWidthAsText.c_str()
+	  << " x " << ReferenceFinder::sPaper.mHeightAsText.c_str()
+	  << "\\), Target: " << total;
+  DrawLabel(XYPt(0), targstr.str(), LABELSTYLE_NORMAL);
+  
+  // Go through our list and draw all the diagrams in a single row. 
+  for (size_t irow = 0; irow < 5; irow++) {
+    XYLine ar(double(vls[irow].first)/double(total));
+    vector<int> cycle = find_cycle(total,vls[irow].first);
+    DecrementOrigin(1.2 * sPSUnit * ReferenceFinder::sPaper.mHeight);
+    vls[irow].second->BuildDiagrams();
+    mPSOrigin.x = sPSPageSize.bl.x;
+    for (size_t icol = 0; icol < RefBase::sDgms.size(); icol++) {
+      RefBase::DrawDiagram(*this, RefBase::sDgms[icol]);
+      mPSOrigin.x += 1.2 * ReferenceFinder::sPaper.mWidth * sPSUnit;
+    };
+    
+    // Also put the text description below the diagrams   
+    mPSOrigin.x = sPSPageSize.bl.x;
+    DecrementOrigin(11);
+    ostringstream sd;
+    sd << "Found a solution for: " << vls[irow].first << "/" << total << endl;
+    DecrementOrigin(11);
+    mPSOrigin.x = sPSPageSize.bl.x;
+    vls[irow].second->PutDistanceAndRank(sd, ar);
+    // mPSOrigin.x = sPSPageSize.bl.x;
+    
+    DrawLabel(XYPt(0), sd.str(), LABELSTYLE_NORMAL);
+    ostringstream cc;
+    cc << "This is part of the cycle: ";
+    for (auto i:cycle){cc<<i<<", ";}
+    DecrementOrigin(11);
+    DrawLabel(XYPt(0), cc.str(), LABELSTYLE_NORMAL);
+
+    for (size_t i = 0; i < RefBase::sSequence.size(); i++) {
+      mPSOrigin.x = sPSPageSize.bl.x;
+      ostringstream s;
+      if (RefBase::sSequence[i]->PutHowto(s)) {
+        DecrementOrigin(11);
+        s << ".";
+        DrawLabel(XYPt(0), s.str(), LABELSTYLE_NORMAL);
+      }
+    }
+    DecrementOrigin(1.2 * sPSUnit * ReferenceFinder::sPaper.mHeight);
+    RefLine* vr = new RefLine(ReferenceFinder::FoldCycle(cycle,total,vls[irow].second->mRank));
+    vr->BuildDiagrams(false);
+    mPSOrigin.x = sPSPageSize.bl.x;
+    for (size_t icol = 0; icol < RefBase::sDgms.size(); icol++) {
+      RefBase::DrawDiagram(*this, RefBase::sDgms[icol]);
+      MoveOriginRight(1.2 * ReferenceFinder::sPaper.mWidth * sPSUnit,1.2 * sPSUnit * ReferenceFinder::sPaper.mHeight);
+    }
+    
+    // Also put the text description below the diagrams   
+    mPSOrigin.x = sPSPageSize.bl.x;
+    DecrementOrigin(11);
+    for (size_t i = 0; i < RefBase::sSequence.size(); i++) {
+      mPSOrigin.x = sPSPageSize.bl.x;
+      ostringstream s;
+      if (RefBase::sSequence[i]->PutHowto(s)) {
+        DecrementOrigin(11);
+        s << ".";
+        DrawLabel(XYPt(0), s.str(), LABELSTYLE_NORMAL);
+      }
+    }
+  // DrawLabel(XYPt(0),"poep", LABELSTYLE_HILITE);
+  }
+  
+  
+
+  // Close the file.  
+  (*mStream) << "showpage" << endl;
+  (*mStream) << "%%Trailer" << endl;
+  (*mStream) << "%%Pages: " << mPSPageCount << endl;
+}
 
 /*****
 Write the PostScript code that draws folding sequences for a list of marks.

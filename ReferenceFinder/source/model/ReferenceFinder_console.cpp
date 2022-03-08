@@ -225,7 +225,7 @@ int main()
         if (ReferenceFinder::ValidateLine(p1, p2, err)) {
           XYLine ll(p1, p2);
           vector<RefLine*> vl;
-          ReferenceFinder::FindBestLines(ll, vl, 5);
+          ReferenceFinder::FindBestLines(ll, vl, 20);
           
           // Write verbal directions to the console
           vsdgmr.PutLineList(ll, vl);
@@ -244,12 +244,12 @@ int main()
         break;
       }
       case 3: {
-        cout << endl << "In  how many divisions do you want to divide your paper?";
+        cout << endl << "In  how many divisions do you want to divide your paper? ";
         int total;
         cin >> total;
-        while (total%2==0){total=total/2;}
+        while (total%2==0){total=total/2;} // the algorithm breaks for multiples of 2
         cout<<"finding refences for: " << total << endl;
-        vector<vector<int>> cycles = find_cycles(total);
+        vector<vector<int>> cycles = find_divisions::find_cycles(total); //find all divisions that 
         vector<pair<int,RefLine*>> vls;
         for (auto cycle: cycles) {
           for (auto division: cycle) {
@@ -260,16 +260,33 @@ int main()
             for (auto l:vl){
               vls.push_back(make_pair(division,l));
             }
-            cout << vl[0]->DistanceTo(ll);
           }
         }
-        // cout <<endl<< CompareRankAndErrorPair(vls[0],vls[2])<<endl;
         sort(vls.begin(),vls.end(),CompareRankAndErrorDivision<RefLine>(total));
         for (int i=0;i<=3;i++){
           XYLine l(double(vls[i].first)/double(total));
           cout<<"Found a very efficient one! at "<< vls[i].first<<"/"<<total<<"with error: "<<vls[i].second->DistanceTo(l)<<endl;
         }
+        cout << "adding stuff to the cycle?";
+        // for (auto i: ReferenceFinder->sBasisLines){cout<<i;}
+        // std::vector<RefLine*> folds;
+        // folds.push_back();
+        // for (int i=0;i<5;i++){
+        //   RefLine *nl;
+        //   ReferenceFinder::sBasisLines.Add(nl = new RefLine_L2L(folds[i],(i%2?le:re), i%2));
+        //   folds.push_back(nl);
+        // }
+
+        // vls[0].second->PutHowtoSequence(cout);
+
+        string fileName;
+        fstream fout;
+        OpenPSFile(fileName, fout);
+        PSStreamDgmr pdgmr(fout);
+        pdgmr.PutDividedRefList(total,vls);
+        fout.close();
         
+        cout << "Diagrams in <" << fileName << ">." << endl;
         break;
       }
       case 99: {
