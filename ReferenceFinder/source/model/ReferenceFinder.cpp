@@ -5,7 +5,7 @@ Purpose:      Implementation for ReferenceFinder generic model
 Author:       Robert J. Lang
 Modified by:  
 Created:      2006-04-22
-Copyright:    ©1999-2007 Robert J. Lang. All Rights Reserved.
+Copyright:    ï¿½1999-2007 Robert J. Lang. All Rights Reserved.
 ******************************************************************************/
  
 #include "ReferenceFinder.h"
@@ -50,8 +50,8 @@ bool ReferenceFinder::sUseRefLine_L2L_P2L = true;
 
 // Maximum rank and number of marks and lines to collect. These can be tweaked
 // up or down to trade off accuracy versus memory and initialization time.
-ReferenceFinder::rank_t ReferenceFinder::sMaxRank = 6;
-size_t ReferenceFinder::sMaxLines = 500000;
+ReferenceFinder::rank_t ReferenceFinder::sMaxRank = 4;
+size_t ReferenceFinder::sMaxLines = 5000000;
 size_t ReferenceFinder::sMaxMarks = 500000;
 
 // constants that quantify the discretization of marks and lines in forming
@@ -65,7 +65,7 @@ int ReferenceFinder::sNumD = 5000;
   
 // Defines "good enough" for a mark. For marks with errors better than this, we
 // give priority to lower-rank marks.
-double ReferenceFinder::sGoodEnoughError = .005;
+double ReferenceFinder::sGoodEnoughError = .0005;
 
 // Minimum allowable aspect ratio for a flap. Too skinny of a flap can't be
 // folded accurately.
@@ -3227,7 +3227,7 @@ void RefContainer<R>::FlushBuffer()
 {
   // Make room for the buffer in the sortable list.
   
-  reserve(this->size() + rcbz);
+  this->reserve(this->size() + rcbz);
   
   // Go through the buffer and add each element to the appropriate rank in the main container.
   
@@ -3235,7 +3235,7 @@ void RefContainer<R>::FlushBuffer()
   while (bi != buffer.end()) {
     R*& rr = bi->second;        // get pointer to each new element
     maps[rr->mRank].insert(*bi);    // add to the map of the appropriate rank
-    push_back(rr);            // also add to our sortable list
+    this->push_back(rr);            // also add to our sortable list
     rcsz++;               // increment our size counter
     bi++;               // increment the buffer iterator
   };

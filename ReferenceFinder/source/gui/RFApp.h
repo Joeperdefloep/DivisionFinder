@@ -5,7 +5,7 @@ Purpose:      Header for application class
 Author:       Robert J. Lang
 Modified by:  
 Created:      2006-04-24
-Copyright:    ©1999-2006 Robert J. Lang. All Rights Reserved.
+Copyright:    ï¿½1999-2006 Robert J. Lang. All Rights Reserved.
 ******************************************************************************/
  
 #ifndef _RFAPP_H_

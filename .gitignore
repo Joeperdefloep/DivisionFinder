@@ -1,6 +1,8 @@
 #wxwidgets builds
 wx*/
 
+build/
+
 # postscript output
 *.ps
 

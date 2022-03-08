@@ -8,7 +8,7 @@
 ### your platform
 
 # Where wxWidgets is installed
-WXHOME = /opt/wxGTK-2.8.0-rc1
+WXHOME = /home/fee/Git/DivisionFinder/wxWidgets-3.1.5
 # Binary name
 PROGRAM = ReferenceFinder
 # Installation directory prefix (usually /usr/local); by wxWidgets
@@ -20,7 +20,7 @@ INSTALL_PREFIX = /usr/local
 
 #--- Compiling options
 OPTIONS =
-OPTIONS += -DAPPNAME=\"$(RF_APP_NAME_STR)\" 
+OPTIONS += -std=c++11 -DAPPNAME=\"$(RF_APP_NAME_STR)\" 
 OPTIONS += -DINSTALL_PREFIX=\"$(INSTALL_PREFIX)/\" 
 # Temporary for experimental Linux development
 OPTIONS += -DCAF
@@ -33,7 +33,7 @@ WXHLPCACHEDIR = $(WXPATH)/utils/hhp2cached
 HELP = $(BUILDGENERIC)/help.zip
 HELPCACHE = $(H2S)/help/reffinder.hhp.cached
 
-BUILD ?= release
+BUILD ?= devel
 
 ifeq ($(BUILD),debug)
   CONDFLAGS = -DTMWX -D__RFDEBUG__ -g 

@@ -5,11 +5,12 @@ Purpose:      Implementation for command-line version of ReferenceFinder
 Author:       Robert J. Lang
 Modified by:  
 Created:      2006-04-22
-Copyright:    ©1999-2006 Robert J. Lang. All Rights Reserved.
+Copyright:    ï¿½1999-2006 Robert J. Lang. All Rights Reserved.
 ******************************************************************************/
  
 #include "ReferenceFinder.h"
-#include "RFVersion.h"
+#include "FindDivisions.h"
+// #include "RFVersion.h"
 
 #include <fstream>
 #include <sstream>
@@ -136,7 +137,6 @@ void ConsoleStatisticsProgress(ReferenceFinder::StatisticsInfo info, void*, bool
   }
 }
 
-
 /*****
 Open a new file stream for output, sequentially numbered
 *****/
@@ -160,7 +160,7 @@ Main program loop
 ******************************/
 int main()
 { 
-  cout << APP_V_M_B_NAME_STR << " (build " << BUILD_CODE_STR << ")" << endl;
+  // cout << APP_V_M_B_NAME_STR << " (build " << BUILD_CODE_STR << ")" << endl;
   cout << "Copyright (c)1999-2006 by Robert J. Lang. All rights reserved." << endl;
   
   VerbalStreamDgmr vsdgmr(cout);
@@ -170,7 +170,7 @@ int main()
 
   //  Loop forever until the user quits from the menu.
   while (true) {
-    cout << "0 = exit, 1 = find mark, 2 = find line : ";
+    cout << "0 = exit, 1 = find mark, 2 = find line, 3 = divide paper into n divisions: ";
     double ns;
     ReadNumber(ns, false);
 
@@ -208,14 +208,19 @@ int main()
       }
       case 2: {
         XYPt p1, p2;
-        cout << endl << "Enter p1 x coordinate: ";
-        ReadNumber (p1.x);
-        cout << "Enter p1 y coordinate: ";
-        ReadNumber (p1.y);
-        cout << endl << "Enter p2 x coordinate: ";
-        ReadNumber (p2.x);
-        cout << "Enter p2 y coordinate: ";
-        ReadNumber (p2.y);
+        // cout << endl << "Enter p1 x coordinate: ";
+        // ReadNumber (p1.x);
+        // cout << "Enter p1 y coordinate: ";
+        // ReadNumber (p1.y);
+        // cout << endl << "Enter p2 x coordinate: ";
+        // ReadNumber (p2.x);
+        // cout << "Enter p2 y coordinate: ";
+        // ReadNumber (p2.y);
+        double d;
+        ReadNumber(d);
+        p1.x = 0;
+        p2.x=1;
+        p1.y=p2.y=d;
         string err;
         if (ReferenceFinder::ValidateLine(p1, p2, err)) {
           XYLine ll(p1, p2);
@@ -230,12 +235,42 @@ int main()
           fstream fout;
           OpenPSFile(fileName, fout);
           PSStreamDgmr pdgmr(fout);
+          pdgmr.PutLineList(ll, vl);
           fout.close();
           cout << "Diagrams in <" << fileName << ">." << endl;
         }
         else 
           cout << err << endl;
-        break;      
+        break;
+      }
+      case 3: {
+        cout << endl << "In  how many divisions do you want to divide your paper?";
+        int total;
+        cin >> total;
+        while (total%2==0){total=total/2;}
+        cout<<"finding refences for: " << total << endl;
+        vector<vector<int>> cycles = find_cycles(total);
+        vector<pair<int,RefLine*>> vls;
+        for (auto cycle: cycles) {
+          for (auto division: cycle) {
+            string err;
+            XYLine ll(double(division)/double(total));
+            vector<RefLine*> vl;
+            ReferenceFinder::FindBestLines(ll, vl, 5);
+            for (auto l:vl){
+              vls.push_back(make_pair(division,l));
+            }
+            cout << vl[0]->DistanceTo(ll);
+          }
+        }
+        // cout <<endl<< CompareRankAndErrorPair(vls[0],vls[2])<<endl;
+        sort(vls.begin(),vls.end(),CompareRankAndErrorDivision<RefLine>(total));
+        for (int i=0;i<=3;i++){
+          XYLine l(double(vls[i].first)/double(total));
+          cout<<"Found a very efficient one! at "<< vls[i].first<<"/"<<total<<"with error: "<<vls[i].second->DistanceTo(l)<<endl;
+        }
+        
+        break;
       }
       case 99: {
         // hidden command to calculate statistics on marks & report results

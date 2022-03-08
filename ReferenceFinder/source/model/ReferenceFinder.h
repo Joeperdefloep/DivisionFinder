@@ -5,7 +5,7 @@ Purpose:      Header for ReferenceFinder generic model
 Author:       Robert J. Lang
 Modified by:  
 Created:      2006-04-22
-Copyright:    ©1999-2007 Robert J. Lang. All Rights Reserved.
+Copyright:    ï¿½1999-2007 Robert J. Lang. All Rights Reserved.
 ******************************************************************************/
  
 #ifndef _REFERENCEFINDER_H_
@@ -110,7 +110,8 @@ public:
     return XYPt(std::abs(x) < EPS ? 0 : x, std::abs(y) < EPS ? 0 : y);}
   XYPt& ChopSelf() {
     if (std::abs(x) < EPS) x = 0; 
-    if (std::abs(y) < EPS) y = 0; return *this;}
+    if (std::abs(y) < EPS) y = 0;
+    return *this;}
   
   // Comparison
   bool operator==(const XYPt& p) const {
@@ -966,6 +967,32 @@ public:
     else {
       if (r1->mRank == r2->mRank) return d1 < d2;
       else return r1->mRank < r2->mRank;
+    }
+  };
+};
+
+/*******
+compare rank and error (same as above) when also accepting different references
+*******/
+template <class R> class CompareRankAndErrorDivision{
+public:
+int mTotal;
+CompareRankAndErrorDivision(int total) : mTotal(total) {};
+  bool operator()(std::pair<int,R*> r1, std::pair<int,R*> r2) const {
+    XYLine l1(double(r1.first)/double(mTotal));
+    XYLine l2(double(r2.first)/double(mTotal));
+    // Compare the distances from the stored target. If both distances are less
+    // than or equal to sGoodEnoughError, compare the refs by their rank.
+    double d1 = r1.second->DistanceTo(l1);
+    double d2 = r2.second->DistanceTo(l2);
+    if ((d1 > ReferenceFinder::sGoodEnoughError) || 
+      (d2 > ReferenceFinder::sGoodEnoughError)) {
+      if (d1 == d2) return r1.second->mRank < r2.second->mRank; 
+      else return d1 < d2;
+    }
+    else {
+      if (r1.second->mRank == r2.second->mRank) return d1 < d2;
+      else return r1.second->mRank < r2.second->mRank;
     }
   };
 };
