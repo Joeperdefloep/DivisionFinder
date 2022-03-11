@@ -5,7 +5,7 @@
 # Adjust these macros for your particular system
 #   (default values are appropriate for GNU tools)
 CC = g++
-CFLAGS = -O3 -Wall -ansi -std=c++11
+CFLAGS = -O3 -Wall -ansi --std=c++14
 # System-specific additional libraries
 LIBS = 
 # Destination directory for executables
@@ -14,7 +14,7 @@ PROGRAM=$(EXEDIR)/ReferenceFinder
 # Optional objects (depend on CALCINPUT)
 OPTOBJS = parser.o lexer.o
 
-OBJS = ReferenceFinder.o ReferenceFinder_console.o $(OPTOBJS)
+OBJS = ReferenceFinder.o ReferenceFinder_console.o FindDivisions.o $(OPTOBJS)
 
 # Main rule
 $(PROGRAM): $(OBJS)
@@ -23,6 +23,9 @@ ReferenceFinder.o: ReferenceFinder.cpp ReferenceFinder.h
 	$(CC) $(CFLAGS) -c ReferenceFinder.cpp
 ReferenceFinder_console.o: ReferenceFinder_console.cpp ReferenceFinder.h parser.h
 	$(CC) $(CFLAGS) -c ReferenceFinder_console.cpp
+
+FindDivisions.o: FindDivisions.cpp FindDivisions.h
+	$(CC) $(CFLAGS) -c FindDivisions.cpp
 
 lexer.o: lexer.cpp lexer.h
 	$(CC) $(CFLAGS) -c lexer.cpp

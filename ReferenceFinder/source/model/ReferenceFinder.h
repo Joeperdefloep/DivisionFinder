@@ -331,6 +331,7 @@ public:
 
   // routines for building a sequence of refs
   virtual void SequencePushSelf();
+  static void SequencePushUnique(RefBase* rb);
   void BuildAndNumberSequence();
   
   // routine for creating a text description of how to fold a ref
@@ -350,7 +351,7 @@ protected:
   virtual bool IsActionLine() const = 0;
   virtual bool IsDerived() const;
   virtual void SetIndex() = 0;
-  static void SequencePushUnique(RefBase* rb);
+  // static void SequencePushUnique(RefBase* rb);
   enum RefStyle {
     REFSTYLE_NORMAL, 
     REFSTYLE_HILITE, 
@@ -890,7 +891,7 @@ public:
   static RefLine MesserCubeRoot();
 
   // routine for folding cycles
-  static RefLine FoldCycle(std::vector<int> cycle, int total, int irank);
+  static RefLine FoldCycles(int start, int total, int irank);
 
 private:
   static RefContainer<RefLine> sBasisLines;  // all lines
@@ -1106,7 +1107,7 @@ public:
   // Write to stream
   void PutMarkList(const XYPt& pp, std::vector<RefMark*>& vm);
   void PutLineList(const XYLine& ll, std::vector<RefLine*>& vl);
-  void PutDividedRefList(int total, std::vector<std::pair<int,RefLine*>> vls);
+  void PutDividedRefList(int total, std::vector<std::pair<int,RefLine*> > vls);
   void PutLineDiagrams(RefLine* vr);
 
 private:
@@ -1139,6 +1140,63 @@ private:
   void SetLabelStyle(LabelStyle lstyle);
 
   void DecrementOrigin(double d);
+  void MoveOriginRight(double d, double linespace);
+  template <class R>
+  void PutRefList(const typename R::bare_t& ar, std::vector<R*>& vr);
+};
+
+/**********
+class HTMLStreamDgmr - a subclass of RefDgmr that writes a PostScript stream of
+diagrams.
+**********/
+class HTMLStreamDgmr : public RefDgmr {
+public:
+  static double SVGUnit;          // size in points of a unit square
+  static const XYRect sPSPageSize;// TODO: remove
+
+  HTMLStreamDgmr(std::ostream& os);
+
+  // Write to stream
+  void PutMarkList(const XYPt& pp, std::vector<RefMark*>& vm);
+  void PutLineList(const XYLine& ll, std::vector<RefLine*>& vl);
+  void PutDividedRefList(int total, std::vector<std::pair<int,RefLine*> > vls);
+  void PutLineDiagrams(RefLine* vr);
+
+private:
+  std::ostream* mStream;
+  XYPt mSVGOrigin;          // current loc of the origin in PS units
+  int mPSPageCount;          // TODO:remove
+    
+  class SVGPt {
+    public:
+      double px;
+      double py;
+      SVGPt(double x, double y) : px(x), py(y) {};
+  };
+  friend std::ostream& operator<<(std::ostream& os, const SVGPt& pp);
+  
+  SVGPt ToSVG(const XYPt& pt);
+
+  // Overridden functions from ancestor class RefDgmr
+  void DrawPaper();
+  void DrawPt(const XYPt& aPt, PointStyle pstyle);
+  void DrawLine(const XYPt& fromPt, const XYPt& toPt, LineStyle lstyle);
+  void DrawArc(const XYPt& ctr, double rad, double fromAngle,
+    double toAngle, bool ccw, LineStyle lstyle);
+  void DrawPoly(const std::vector<XYPt>& poly, PolyStyle pstyle);
+  void DrawLabel(const std::string& aString, LabelStyle lstyle);
+  void DrawFoldAndUnfoldArrow(const XYPt& fromPt, const XYPt& toPt);
+  
+
+
+  // HTMLStreamDgmr - specific stuff
+  void MakeHeader();
+  void SetPointStyle(PointStyle pstyle);
+  void SetLineStyle(LineStyle lstyle);
+  void SetPolyStyle(PolyStyle pstyle);
+  void SetLabelStyle(LabelStyle lstyle);
+
+  void NewLine();
   void MoveOriginRight(double d, double linespace);
   template <class R>
   void PutRefList(const typename R::bare_t& ar, std::vector<R*>& vr);

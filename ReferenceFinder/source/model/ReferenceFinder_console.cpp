@@ -103,6 +103,11 @@ void ConsoleDatabaseProgress(ReferenceFinder::DatabaseInfo info, void*, bool&)
       // Called when we're completely done
       cout << endl << endl << flush;
       break;
+    
+    case ReferenceFinder::DATABASE_EMPTY:
+      // To keep the compiler happy, should not happen
+      cout<< "oops! Empty database!";
+      break;
   }
 }
 
@@ -140,12 +145,12 @@ void ConsoleStatisticsProgress(ReferenceFinder::StatisticsInfo info, void*, bool
 /*****
 Open a new file stream for output, sequentially numbered
 *****/
-void OpenPSFile(string& fileName, fstream& fout)
+void OpenFile(string& fileName, fstream& fout, string ftype = "ps")
 {
   static int fileCount = 0;
   stringstream fileNameStr;
   fileNameStr << "ReferenceFinder_" << setw(3) << setfill('0') << 
-    ++fileCount << ".ps";
+    ++fileCount << "." << ftype;
   fileName = fileNameStr.str();
   fout.open(fileName.c_str(), ios::out | ios::trunc);
   if (!fout.good()) {
@@ -196,7 +201,7 @@ int main()
           // Also draw Postscript directions to a file
           string fileName;
           fstream fout;
-          OpenPSFile(fileName, fout);
+          OpenFile(fileName, fout);
           PSStreamDgmr pdgmr(fout);
           pdgmr.PutMarkList(pp, vm);
           fout.close();
@@ -233,7 +238,7 @@ int main()
           // Also draw Postscript directions to a file
           string fileName;
           fstream fout;
-          OpenPSFile(fileName, fout);
+          OpenFile(fileName, fout);
           PSStreamDgmr pdgmr(fout);
           pdgmr.PutLineList(ll, vl);
           fout.close();
@@ -249,14 +254,14 @@ int main()
         cin >> total;
         while (total%2==0){total=total/2;} // the algorithm breaks for multiples of 2
         cout<<"finding refences for: " << total << endl;
-        vector<vector<int>> cycles = find_divisions::find_cycles(total); //find all divisions that 
+        vector<vector<int>> cycles = DivisionFinder::find_cycles(total); //find all divisions that 
         vector<pair<int,RefLine*>> vls;
         for (auto cycle: cycles) {
           for (auto division: cycle) {
             string err;
             XYLine ll(double(division)/double(total));
             vector<RefLine*> vl;
-            ReferenceFinder::FindBestLines(ll, vl, 5);
+            ReferenceFinder::FindBestLines(ll, vl, 1);
             for (auto l:vl){
               vls.push_back(make_pair(division,l));
             }
@@ -267,23 +272,47 @@ int main()
           XYLine l(double(vls[i].first)/double(total));
           cout<<"Found a very efficient one! at "<< vls[i].first<<"/"<<total<<"with error: "<<vls[i].second->DistanceTo(l)<<endl;
         }
-        cout << "adding stuff to the cycle?";
-        // for (auto i: ReferenceFinder->sBasisLines){cout<<i;}
-        // std::vector<RefLine*> folds;
-        // folds.push_back();
-        // for (int i=0;i<5;i++){
-        //   RefLine *nl;
-        //   ReferenceFinder::sBasisLines.Add(nl = new RefLine_L2L(folds[i],(i%2?le:re), i%2));
-        //   folds.push_back(nl);
-        // }
-
-        // vls[0].second->PutHowtoSequence(cout);
 
         string fileName;
         fstream fout;
-        OpenPSFile(fileName, fout);
+        OpenFile(fileName, fout);
         PSStreamDgmr pdgmr(fout);
         pdgmr.PutDividedRefList(total,vls);
+        fout.close();
+        
+        cout << "Diagrams in <" << fileName << ">." << endl;
+        break;
+      }
+      case 4:{
+        cout << endl << "In  how many divisions do you want to divide your paper? ";
+        int total;
+        cin >> total;
+        while (total%2==0){total=total/2;} // the algorithm breaks for multiples of 2
+        cout<<"finding refences for: " << total << endl;
+        vector<vector<int>> cycles = DivisionFinder::find_cycles(total); //find all divisions that 
+        vector<pair<int,RefLine*>> vls;
+        for (auto cycle: cycles) {
+          for (auto division: cycle) {
+            string err;
+            XYLine ll(double(division)/double(total));
+            vector<RefLine*> vl;
+            ReferenceFinder::FindBestLines(ll, vl, 1);
+            for (auto l:vl){
+              vls.push_back(make_pair(division,l));
+            }
+          }
+        }
+        sort(vls.begin(),vls.end(),CompareRankAndErrorDivision<RefLine>(total));
+        for (int i=0;i<=3;i++){
+          XYLine l(double(vls[i].first)/double(total));
+          cout<<"Found a very efficient one! at "<< vls[i].first<<"/"<<total<<"with error: "<<vls[i].second->DistanceTo(l)<<endl;
+        }
+
+        string fileName;
+        fstream fout;
+        OpenFile(fileName, fout, "html");
+        HTMLStreamDgmr hdgmr(fout);
+        hdgmr.PutDividedRefList(total,vls);
         fout.close();
         
         cout << "Diagrams in <" << fileName << ">." << endl;
@@ -293,6 +322,9 @@ int main()
         // hidden command to calculate statistics on marks & report results
         ReferenceFinder::CalcStatistics();
         break;
+      }
+      case -1:{
+        return 0;
       }
       default:
         cout << "Enter just 0, 1 or 2, please.\n\n";

@@ -9,11 +9,15 @@ Copyright:    �1999-2007 Robert J. Lang. All Rights Reserved.
 ******************************************************************************/
  
 #include "ReferenceFinder.h"
+#include "FindDivisions.h"
 
 #include <fstream>
 #include <sstream>
 #include <algorithm>
 #include <iomanip>
+
+#include <cmath>
+#include<map>
 
 using namespace std;
 
@@ -349,7 +353,7 @@ void ReferenceFinder::CalcStatistics()
       sStatisticsUserData, cancel);
   }
   
-  vector<int> errBucket;              // number of errors in each bucket
+  vector<int> errBucket;              // number of errors inme each bucket
   errBucket.assign(sNumBuckets, 0);
   vector<double> errors;              // list of all errors
   vector <RefMark*> sortMarks(1);     // a vector to do our sorting into
@@ -427,72 +431,10 @@ void ReferenceFinder::CalcStatistics()
 }
 
 
-// /*****
-// This routine builds Peter Messer's construction of  cube root of 2. Only used
-// for testing, but I'll leave it in here for edification.
-// *****/
-// RefLine ReferenceFinder::MesserCubeRoot()
-// {
-//   // Rank 0: Construct the four edges of the square.
-//   RefLine *be, *le, *re, *te;
-  
-//   ReferenceFinder::sBasisLines.Add(be = new RefLine_Original(
-//     sPaper.mBottomEdge, 0, string("bottom edge")));
-//   ReferenceFinder::sBasisLines.Add(le = new RefLine_Original(
-//     sPaper.mLeftEdge, 0, string("left edge")));
-//   ReferenceFinder::sBasisLines.Add(re = new RefLine_Original(
-//     sPaper.mRightEdge, 0, string("right edge")));
-//   ReferenceFinder::sBasisLines.Add(te = new RefLine_Original
-//     (sPaper.mTopEdge, 0, string("top edge")));
-
-//   // Rank 0: Construct the four corners of the square.
-//   RefMark *blc, *brc, *tlc, *trc;
-  
-//   ReferenceFinder::sBasisMarks.Add(blc = new RefMark_Original(
-//   sPaper.mBotLeft, 0, string("bot left corner")));
-//   ReferenceFinder::sBasisMarks.Add(brc = new RefMark_Original(
-//   sPaper.mBotRight, 0, string("bot right corner")));
-//   ReferenceFinder::sBasisMarks.Add(tlc = new RefMark_Original(
-//   sPaper.mTopLeft, 0, string("top left corner")));
-//   ReferenceFinder::sBasisMarks.Add(trc = new RefMark_Original(
-//   sPaper.mTopRight, 0, string("top right corner")));
-
-//   // Create the endpoints of the two initial fold lines
-//   RefMark *rma1, *rma2, *rmb1, *rmb2;
-//   ReferenceFinder::sBasisMarks.Add(rma1 = new RefMark_Original(XYPt(0, 1./3), 0, 
-//     string("(0, 1/3)")));
-//   ReferenceFinder::sBasisMarks.Add(rma2 = new RefMark_Original(XYPt(1, 1./3), 0, 
-//     string("(1, 1/3)")));
-//   ReferenceFinder::sBasisMarks.Add(rmb1 = new RefMark_Original(XYPt(0, 2./3), 0, 
-//     string("(0, 2/3)")));
-//   ReferenceFinder::sBasisMarks.Add(rmb2 = new RefMark_Original(XYPt(1, 2./3), 0, 
-//     string("(1, 2/3)")));
-
-//   // Create and add the two initial fold lines.
-//   RefLine *rla, *rlb, *rlc;
-//   ReferenceFinder::sBasisLines.Add(rla = new RefLine_C2P_C2P(rma1, rma2));
-//   ReferenceFinder::sBasisLines.Add(rlb = new RefLine_C2P_C2P(rmb1, rmb2));
-  
-//   // Construct the fold line
-//   ReferenceFinder::sBasisLines.Add(rlc = new RefLine_P2L_P2L(brc, le, rma2, rlb, 0));
-//   // RefLine_L2L ll(rlc,re,0);
-
-//   std::vector<RefLine*> folds;
-//   folds.push_back(rlc);
-//   for (int i=0;i<5;i++){
-//     RefLine *nl;
-//     // ReferenceFinder::sBasisLines.Add(nl = new RefLine_L2L(folds[i],(i%2?le:re), i%2,string(cycle[i])+"/"+string(total)));
-//     folds.push_back(nl);
-//   }
-//   // Print the entire sequence
-//   folds[5]->PutHowtoSequence(cout);
-//   return *folds[5];
-// }
-
 /*****
 Fold a complete cycle
 *****/
-RefLine ReferenceFinder::FoldCycle(vector<int> cycle, int total, int irank)
+RefLine ReferenceFinder::FoldCycles(int start, int total, int irank)
 {
   //erase the folding sequence
   RefBase::sSequence.clear();
@@ -522,19 +464,47 @@ RefLine ReferenceFinder::FoldCycle(vector<int> cycle, int total, int irank)
 
   // Create the initial fold line: first from cycle
   RefLine *og;
-  XYLine ogl(double(cycle[0])/double(total));
-  ReferenceFinder::sBasisLines.Add(og = new RefLine_Original(ogl, irank, to_string(cycle[0])+"/"+to_string(total)));
+  XYLine ogl(double(start)/double(total));
+  ReferenceFinder::sBasisLines.Add(og = new RefLine_Original(ogl, irank, std::to_string(start)+"/"+to_string(total)));
 
-  std::vector<RefLine*> folds;
-  folds.push_back(og);
-  for (size_t i=0;i<cycle.size()-1;i++){
+  //make a set of all non-factors of total (these are the ones we want to fold, )
+  // we assume the rest is somewhat trivial when these are folded. (https://theproofistrivial.com)
+  set<int> to_fold = DivisionFinder::non_prime_factors(total);
+  // for (int i=1; i<total; i++){to_fold.insert(i);}
+  to_fold.erase(start);
+
+  std::map<int, RefLine*> folds;
+  std::vector<int> cycle;
+  // it is very important that the last items of cycle and folds is the same!
+  int last_folded = start;
+  folds[start] = og;
+  folds[last_folded]->SequencePushUnique(folds[last_folded]);
+  while(!to_fold.empty()){
     RefLine *nl;
-    ReferenceFinder::sBasisLines.Add(nl = new RefLine_L2L(folds[i],(cycle[i]%2?re:le), 0,to_string(cycle[i+1])+"/"+to_string(total)));
-    folds.push_back(nl);
+    cycle = DivisionFinder::find_cycle(last_folded,total);
+    for (size_t i = 1; i<cycle.size(); i++){
+      ReferenceFinder::sBasisLines.Add(nl = new RefLine_L2L(folds[last_folded],(last_folded%2?re:le), 0,to_string(cycle[i])+"/"+to_string(total)));
+      last_folded = cycle[i];
+      // std::cout<<"folded: "<<last_folded<<"/"<<total<<std::endl;
+      folds[last_folded] = nl;
+      folds[last_folded]->SequencePushUnique(folds[last_folded]);
+      to_fold.erase(last_folded);
+      for(auto i:to_fold){std::cout<<i<<", ";}
+      std::cout<<endl;
+    }
+    if(to_fold.empty()){std::cout<<"done!";break;}
+    std::cout<<"not done yet: ";
+    for(auto f:to_fold){std::cout<<f<<", ";}
+    std::pair<int,int> fold = DivisionFinder::find_fold(cycle,to_fold);
+    std::cout << "now folding: ("<<fold.first<<", "<<fold.second<<")" << (fold.first+fold.second)/2<<endl;
+    last_folded = (fold.first + fold.second)/2;
+    ReferenceFinder::sBasisLines.Add(nl = new RefLine_L2L(folds[fold.first],folds[fold.second], 0,to_string(last_folded)+"/"+to_string(total)));
+    to_fold.erase(last_folded);
+    folds[last_folded] = nl; //last_folded should be updated by now
+    folds[last_folded]->SequencePushUnique(folds[last_folded]);
   }
-  folds.back()->SequencePushSelf();
-  for(auto i:RefBase::sSequence){std::cout<<i<<std::endl;}
-  return *folds.back();
+  // folds[last_folded]->SequencePushUnique(folds[last_folded]);
+  return *folds[last_folded];
 }
 
 #ifdef __MWERKS__
@@ -951,7 +921,9 @@ void RefBase::DrawDiagram(RefDgmr& aDgmr, const DgmInfo& aDgm)
       RefBase* rb = sSequence[i];
       if ((i >= aDgm.idef && rb->IsDerived()) || ral->UsesImmediate(rb)) 
         rb->DrawSelf(REFSTYLE_HILITE, ipass);
-      else rb->DrawSelf(REFSTYLE_NORMAL, ipass);
+      else {
+        rb->DrawSelf(REFSTYLE_NORMAL, ipass);
+      }
     };
     sSequence[aDgm.iact]->DrawSelf(REFSTYLE_ACTION, ipass);
   }
@@ -3957,20 +3929,6 @@ void PSStreamDgmr::PutRefList(const typename R::bare_t& ar, vector<R*>& vr)
   (*mStream) << "%%Pages: " << mPSPageCount << endl;
 }
 
-/****
-Stupid helper function for finding a cycle
-*****/
-vector<int> find_cycle(int total, int start){
-  std::cout << "finding cycle for " << total << " starting at " << start << endl;
-  std::vector<int> cycle = {start};
-  int current = (start %2==0)?start/2:(total+start)/2;
-  while (current!=start){
-    cycle.push_back(current);
-    current = (current%2==0)?current/2:(total+current)/2;
-  }
-  return cycle;
-}
-
 /*****
 Specialized version for division into nths
 Draw a set of marks or lines to a PostScript stream, showing distance and rank
@@ -4012,9 +3970,9 @@ void PSStreamDgmr::PutDividedRefList(int total, vector<pair<int,RefLine*>> vls)
   DrawLabel(XYPt(0), targstr.str(), LABELSTYLE_NORMAL);
   
   // Go through our list and draw all the diagrams in a single row. 
-  for (size_t irow = 0; irow < 5; irow++) {
+  for (size_t irow = 0; irow < 1; irow++) {
     XYLine ar(double(vls[irow].first)/double(total));
-    vector<int> cycle = find_cycle(total,vls[irow].first);
+    // vector<int> cycle = find_cycle(total,vls[irow].first);
     DecrementOrigin(1.2 * sPSUnit * ReferenceFinder::sPaper.mHeight);
     vls[irow].second->BuildDiagrams();
     mPSOrigin.x = sPSPageSize.bl.x;
@@ -4035,8 +3993,8 @@ void PSStreamDgmr::PutDividedRefList(int total, vector<pair<int,RefLine*>> vls)
     
     DrawLabel(XYPt(0), sd.str(), LABELSTYLE_NORMAL);
     ostringstream cc;
-    cc << "This is part of the cycle: ";
-    for (auto i:cycle){cc<<i<<", ";}
+    // cc << "This is part of the cycle: ";
+    // for (auto i:cycle){cc<<i<<", ";}
     DecrementOrigin(11);
     DrawLabel(XYPt(0), cc.str(), LABELSTYLE_NORMAL);
 
@@ -4050,7 +4008,7 @@ void PSStreamDgmr::PutDividedRefList(int total, vector<pair<int,RefLine*>> vls)
       }
     }
     DecrementOrigin(1.2 * sPSUnit * ReferenceFinder::sPaper.mHeight);
-    RefLine* vr = new RefLine(ReferenceFinder::FoldCycle(cycle,total,vls[irow].second->mRank));
+    RefLine* vr = new RefLine(ReferenceFinder::FoldCycles(vls[irow].first,total,vls[irow].second->mRank));
     vr->BuildDiagrams(false);
     mPSOrigin.x = sPSPageSize.bl.x;
     for (size_t icol = 0; icol < RefBase::sDgms.size(); icol++) {
@@ -4095,6 +4053,423 @@ void PSStreamDgmr::PutMarkList(const XYPt& pp, vector<RefMark*>& vm)
 Write the PostScript code that draws folding sequences for a list of lines.
 *****/
 void PSStreamDgmr::PutLineList(const XYLine& ll, vector<RefLine*>& vl)
+{
+  PutRefList(ll, vl);
+}
+
+/**********
+class HTMLStreamDgmr - a specialization of RefDgmr that writes a HTML page
+stream of diagrams.
+**********/
+
+/* Notes on class HTMLStreamDgmr.
+This class is used in the command-line version of ReferenceFinder to create
+a Postscript graphics file of folding diagrams. It's also a good model for how
+to implement a true graphic outputter.
+*/
+
+/*****
+HTMLStreamDgmr static member initialization
+*****/
+double HTMLStreamDgmr::SVGUnit = 100;    // 72 pts = 1 inch, 1 unit = 64 pts, fits 7 dgms
+const XYRect HTMLStreamDgmr::sPSPageSize(40, 40, 572, 752);  // printable area on the page
+
+
+/*****
+Constructor
+*****/
+HTMLStreamDgmr::HTMLStreamDgmr(ostream& os) :
+   mStream(&os),
+   mPSPageCount(0)
+{
+}
+
+/*****
+Make the HTML header
+*****/
+void HTMLStreamDgmr::MakeHeader(){
+  (*mStream)<<"<!DOCTYPE html>\n<html>\n<head>\n  <svg width=\"0\" height=\"0\">\n    <defs>\n        <marker id=\"arrow\" markerWidth=\"10\" markerHeight=\"10\" refX=\"9\" refY=\"3\" orient=\"auto\" markerUnits=\"strokeWidth\">\n"
+  "        <path d=\"M0,0 L9,3 L0,6\" stroke=\"green\" fill=\"none\"/>\n        </marker>\n        <marker id=\"unfold_arrow\" markerWidth=\"10\" markerHeight=\"10\" refX=\"0\" refY=\"3\" orient=\"auto\" markerUnits=\"strokeWidth\">"
+  "        <path d=\"M0,3 L9,0 L9,6 z\" stroke=\"green\" fill=\"#fd7\" stroke-linejoin=\"round\" />\n        </marker>\n      </defs>\n"
+  "  </svg>\n</head>\n<body>";
+}
+
+/*****
+Stream output for a SVG point TODO: make redundant
+*****/
+ostream& operator<<(ostream& os, const HTMLStreamDgmr::SVGPt& pp)
+{
+  return os << pp.px << " " << pp.py;
+}
+
+/*****
+Set the current graphics state to the given PointStyle.
+*****/
+void HTMLStreamDgmr::SetPointStyle(PointStyle pstyle)
+{
+  switch (pstyle) {
+    case POINTSTYLE_NORMAL:
+      (*mStream) << "stroke=\"black\" stroke-width=\"1\"" << endl;
+      break;
+    case POINTSTYLE_HILITE:
+      (*mStream) << "stroke=\"rgb(128,64,64)\" stroke-width=\"3\""<< endl;
+      break;
+    case POINTSTYLE_ACTION:
+      (*mStream) << "stroke=\"rgb(128,0,0)\" stroke-width=\"3\"" << endl;
+      break;
+  }
+}
+
+
+/*****
+Set the current graphics state to the given LineStyle
+*****/
+void HTMLStreamDgmr::SetLineStyle(LineStyle lstyle)
+{
+  switch (lstyle) {
+    case LINESTYLE_CREASE:
+      (*mStream) << "stroke=\"darkgray\" stroke-width=\".2\"" << endl;
+      break;
+    case LINESTYLE_EDGE:
+      (*mStream) << "stroke=\"darkgray\" stroke-width=\".5\"" << endl;
+      break;
+    case LINESTYLE_HILITE:
+      (*mStream) << "stroke=\"darkmagenta\" stroke-width=\"2\"" << endl;
+      break;
+    case LINESTYLE_VALLEY:
+      (*mStream) << "stroke=\"green\" stroke-width=\".5\" stroke-dasharray=\"2\"" << endl;
+      break;
+    case LINESTYLE_MOUNTAIN:
+      (*mStream) << "stroke=\"green\" stroke-width=\".5\" stroke-dasharray=\"3 2 2 2\""<<endl;
+      break;
+    case LINESTYLE_ARROW:
+      (*mStream) << "stroke=\"darkgreen\" stroke-width=\".5\"" << endl;
+      break;
+  }
+}
+
+
+/*****
+Set the current graphics state to the given PolyStyle
+*****/
+void HTMLStreamDgmr::SetPolyStyle(PolyStyle pstyle)
+{
+  switch (pstyle) {
+    case POLYSTYLE_WHITE:
+      (*mStream) << "fill=\"#fd9\" stroke-width=\"2\" stroke=\"black\"" << endl;
+      break;
+    case POLYSTYLE_COLORED:
+      (*mStream) << "fill=\"darkblue\"" << endl;
+      break;
+    case POLYSTYLE_ARROW:
+      (*mStream) << "fill=\"green\"" << endl;
+      break;
+  }
+}
+
+
+/*****
+Set the current graphics state to the given LabelStyle
+*****/
+void HTMLStreamDgmr::SetLabelStyle(LabelStyle lstyle)
+{
+  switch (lstyle) {
+    case LABELSTYLE_NORMAL:
+      (*mStream) << "0 setgray " << endl;
+      break;
+    case LABELSTYLE_HILITE:
+      (*mStream) << ".5 .25 .25 setrgbcolor " << endl;
+      break;
+    case LABELSTYLE_ACTION:
+      (*mStream) << ".5 0 0 setrgbcolor " << endl;
+      break;
+  }
+}
+
+
+/*****
+Coordinate conversion
+*****/
+HTMLStreamDgmr::SVGPt HTMLStreamDgmr::ToSVG(const XYPt& aPt)
+{
+  return SVGPt(mSVGOrigin.x + SVGUnit * aPt.x, mSVGOrigin.y + SVGUnit * aPt.y);
+}
+
+/****
+Draw a fold-andunfold arrow
+****/
+void  HTMLStreamDgmr::DrawFoldAndUnfoldArrow(const XYPt& fromPt, const XYPt& toPt)
+{
+  SVGPt fPt = ToSVG(fromPt);
+  SVGPt tPt = ToSVG(toPt);
+  //TODO: make this a nice curved arrow
+  (*mStream) << "<path d=\"M "<<fPt.px<<" "<<fPt.py<<"L "<<tPt.px<<" "<<tPt.py
+    <<" fill=\"none\" stroke=\"green\" stroke-width=\"1\""
+    <<"marker-start=\"url(#unfold_arrow)\" marker-end=\"url(#arrow)\"/>"<<endl;
+}
+
+/*****
+Draw a PostScript point in the indicated style.
+*****/
+void HTMLStreamDgmr::DrawPt(const XYPt& aPt, PointStyle pstyle)
+{
+  SVGPt sPt = ToSVG(aPt);
+  (*mStream) << "<circle r=\"1\" cx=\""<<sPt.px<<"\" cy=\""<<sPt.py<<"\"";
+  SetPointStyle(pstyle);
+  (*mStream) << "/>"<<endl;
+}
+
+
+/*****
+Draw a SVG line in the indicated style.
+*****/
+void HTMLStreamDgmr::DrawLine(const XYPt& fromPt, const XYPt& toPt, 
+  LineStyle lstyle)
+{
+  SVGPt fPt = ToSVG(fromPt);
+  SVGPt tPt = ToSVG(toPt);
+  (*mStream) << "<line x1=\""<<fPt.px<<"\" y1=\""<<fPt.py<<"\" x2=\""<<tPt.px<<"\" y2=\""<<tPt.py<<"\""<<endl;
+  SetLineStyle(lstyle);
+  (*mStream) << "/>"<<endl;
+}
+
+/*****
+Draw a SVG arc in the indicated style.
+*****/
+void HTMLStreamDgmr::DrawArc(const XYPt& ctr, double rad, double fromAngle,
+  double toAngle, bool ccw, LineStyle lstyle)
+{
+  const double RADIANS = 57.29577951;
+  (*mStream) << "<path";
+  if (ccw)
+    (*mStream) << "d=" << ToSVG(ctr) << " " << rad * SVGUnit << " " << 
+    fromAngle * RADIANS << " " << toAngle * RADIANS  << " arc stroke" << endl;
+  else
+    (*mStream) << "newpath " << ToSVG(ctr) << " " << rad * SVGUnit << " " << 
+    fromAngle * RADIANS  << " " << toAngle * RADIANS  << " arcn stroke" << endl;
+}
+
+
+/*****
+Fill and stroke the given poly in the indicated style.
+*****/
+void HTMLStreamDgmr::DrawPoly(const vector<XYPt>& poly, PolyStyle pstyle)
+{
+  (*mStream) << "<path d=\"M" << ToSVG(poly[poly.size()-1]);
+  for (size_t i = 0; i < poly.size(); i++)
+    (*mStream) << " L "<< ToSVG(poly[i]);
+  (*mStream) << "\"";
+
+  // Fill the poly
+  SetPolyStyle(pstyle);
+  // (*mStream) << "fill grestore " << endl;
+  
+  // Stroke the poly
+  switch (pstyle) {
+    case POLYSTYLE_WHITE:
+    case POLYSTYLE_COLORED:
+      SetLineStyle(LINESTYLE_EDGE);
+      break;
+    case POLYSTYLE_ARROW:
+      SetLineStyle(LINESTYLE_ARROW);
+      break;
+  };
+  (*mStream) << "/>" << endl;
+}
+
+
+/*****
+Draw a text label at the point aPt in the indicated style
+*****/
+void HTMLStreamDgmr::DrawLabel(const string& aString, 
+  LabelStyle lstyle)
+{
+  // SetLabelStyle(lstyle);
+  (*mStream) << "<p>\n" << aString << "\n</p>" << endl;
+}
+
+
+/*****
+Decrement the mPSOrigin by a distance d. If we drop below the bottom margin,
+start a new page.
+*****/
+
+void HTMLStreamDgmr::NewLine()
+{
+  
+  (*mStream)<<"</p>\n<p>";
+}
+
+/*****
+Draw a set of marks or lines to a PostScript stream, showing distance and rank
+for each sequence.
+*****/
+template <class R>
+void HTMLStreamDgmr::PutRefList(const typename R::bare_t& ar, vector<R*>& vr)
+{
+  ReferenceFinder::sClarifyVerbalAmbiguities = false;
+  ReferenceFinder::sAxiomsInVerbalDirections = false;
+
+  // Put some comments so our readers are happy 
+  MakeHeader();
+  (*mStream) << "/Times-Roman findfont 12 scalefont setfont" << endl;
+  // (*mStream) << "0 setgray" << endl;
+  NewLine();
+  DrawLabel("ReferenceFinder 4.0 by Robert J. Lang", LABELSTYLE_NORMAL);
+  
+  // Note the point we're searching for.
+  (*mStream) << "/Times-Roman findfont 9 scalefont setfont" << endl;
+  NewLine();
+  stringstream targstr;
+  targstr << "Paper: \\(" << ReferenceFinder::sPaper.mWidthAsText.c_str()
+	  << " x " << ReferenceFinder::sPaper.mHeightAsText.c_str()
+	  << "\\), Target: " << ar;
+  DrawLabel(targstr.str(), LABELSTYLE_NORMAL);
+  
+  // Go through our list and draw all the diagrams in a single row. 
+  for (size_t irow = 0; irow < vr.size(); irow++) {
+    NewLine();
+    vr[irow]->BuildDiagrams();
+    mSVGOrigin.x = sPSPageSize.bl.x;
+    for (size_t icol = 0; icol < RefBase::sDgms.size(); icol++) {
+      RefBase::DrawDiagram(*this, RefBase::sDgms[icol]);
+      mSVGOrigin.x += 1.2 * ReferenceFinder::sPaper.mWidth * SVGUnit;
+    };
+    
+    // Also put the text description below the diagrams   
+    mSVGOrigin.x = sPSPageSize.bl.x;
+    NewLine();
+    ostringstream sd;
+    vr[irow]->PutDistanceAndRank(sd, ar);
+    DrawLabel(sd.str(), LABELSTYLE_NORMAL);
+    for (size_t i = 0; i < RefBase::sSequence.size(); i++) {
+      mSVGOrigin.x = sPSPageSize.bl.x;
+      ostringstream s;
+      if (RefBase::sSequence[i]->PutHowto(s)) {
+        NewLine();
+        s << ".";
+        DrawLabel(s.str(), LABELSTYLE_NORMAL);
+      }
+    }
+  }
+  
+  // Close the file.  
+  (*mStream) << "showpage" << endl;
+  (*mStream) << "%%Trailer" << endl;
+  (*mStream) << "%%Pages: " << mPSPageCount << endl;
+}
+
+/*****
+Specialized version for division into nths
+Draw a set of marks or lines to a PostScript stream, showing distance and rank
+for each sequence.
+*****/
+void HTMLStreamDgmr::PutDividedRefList(int total, vector<pair<int,RefLine*>> vls)
+{
+  ReferenceFinder::sClarifyVerbalAmbiguities = false;
+  ReferenceFinder::sAxiomsInVerbalDirections = false;
+
+  // Put some initial setup information 
+  MakeHeader();
+  (*mStream) << "ReferenceFinder 4.0 by Robert J. Lang, hacky divisionfinder version by Joep Gevaert";
+  
+  // Note the point we're searching for.
+  // (*mStream) << "/Times-Roman findfont 9 scalefont setfont" << endl;
+  NewLine();
+  stringstream targstr;
+  targstr << "Paper: (" << ReferenceFinder::sPaper.mWidthAsText.c_str()
+	  << " x " << ReferenceFinder::sPaper.mHeightAsText.c_str()
+	  << "), Target: " << total;
+  // DrawLabel(targstr.str(), LABELSTYLE_NORMAL);
+  
+  // Go through our list and draw all the diagrams in a single row. 
+  (*mStream) <<"<svg height=150px width=1000px>";
+  for (size_t irow = 0; irow < 1; irow++) {
+    XYLine ar(double(vls[irow].first)/double(total));
+    // vector<int> cycle = find_cycle(total,vls[irow].first);
+    // NewLine();
+    vls[irow].second->BuildDiagrams();
+    mSVGOrigin.x = 25;
+    mSVGOrigin.y = 25;
+    for (size_t icol = 0; icol < RefBase::sDgms.size(); icol++) {
+      RefBase::DrawDiagram(*this, RefBase::sDgms[icol]);
+      mSVGOrigin.x += 1.2 * ReferenceFinder::sPaper.mWidth * SVGUnit;
+    };
+    (*mStream) << "</svg>";
+    // Also put the text description below the diagrams   
+    mSVGOrigin.x = sPSPageSize.bl.x;
+    NewLine();
+    ostringstream sd;
+    sd << "Found a solution for: " << vls[irow].first << "/" << total << endl;
+    NewLine();
+    mSVGOrigin.x = sPSPageSize.bl.x;
+    vls[irow].second->PutDistanceAndRank(sd, ar);
+    
+    DrawLabel(sd.str(), LABELSTYLE_NORMAL);
+    for (size_t i = 0; i < RefBase::sSequence.size(); i++) {
+      mSVGOrigin.x = sPSPageSize.bl.x;
+      ostringstream s;
+      if (RefBase::sSequence[i]->PutHowto(s)) {
+        NewLine();
+        s << ".";
+        DrawLabel(s.str(), LABELSTYLE_NORMAL);
+      }
+    }
+    // NewLine();
+    RefLine* vr = new RefLine(ReferenceFinder::FoldCycles(vls[irow].first,total,vls[irow].second->mRank));
+    vr->BuildDiagrams(false);
+    mSVGOrigin.x = 0;
+    mSVGOrigin.y = 25;
+    int rows = DivisionFinder::non_prime_factors(total).size()/5+1;
+    std::cout<<rows<<"so, height= "<<rows*SVGUnit*ReferenceFinder::sPaper.mHeight*1.2+50 <<endl;
+    (*mStream) << "<svg width=\""<<5*SVGUnit*ReferenceFinder::sPaper.mWidth*1.2+50<<"px\" height=\""<<rows*SVGUnit*ReferenceFinder::sPaper.mHeight*1.2+50<<"px\">"<<endl;
+    for (size_t icol = 0; icol < RefBase::sDgms.size(); icol++) {
+      RefBase::DrawDiagram(*this, RefBase::sDgms[icol]);
+      if(icol%5!=4) {
+        mSVGOrigin.x += 1.2 * ReferenceFinder::sPaper.mWidth * SVGUnit;
+      } else {
+        mSVGOrigin.x = 0;
+        mSVGOrigin.y += 1.2 * ReferenceFinder::sPaper.mHeight * SVGUnit;
+      }
+    }
+    (*mStream) << "</svg>" << endl;
+    // Also put the text description below the diagrams   
+    // mSVGOrigin.x = sPSPageSize.bl.x;
+    NewLine();
+    for (size_t i = 0; i < RefBase::sSequence.size(); i++) {
+      mSVGOrigin.x = sPSPageSize.bl.x;
+      ostringstream s;
+      if (RefBase::sSequence[i]->PutHowto(s)) {
+        NewLine();
+        s << ".";
+        DrawLabel(s.str(), LABELSTYLE_NORMAL);
+      }
+    }
+  // DrawLabel(XYPt(0),"poep", LABELSTYLE_HILITE);
+  }
+  
+  
+
+  // Close the file.  
+  (*mStream) << "showpage" << endl;
+  (*mStream) << "%%Trailer" << endl;
+  (*mStream) << "%%Pages: " << mPSPageCount << endl;
+}
+
+/*****
+Write the PostScript code that draws folding sequences for a list of marks.
+*****/
+
+void HTMLStreamDgmr::PutMarkList(const XYPt& pp, vector<RefMark*>& vm)
+{
+  PutRefList(pp, vm);
+}
+
+
+/*****
+Write the PostScript code that draws folding sequences for a list of lines.
+*****/
+void HTMLStreamDgmr::PutLineList(const XYLine& ll, vector<RefLine*>& vl)
 {
   PutRefList(ll, vl);
 }
