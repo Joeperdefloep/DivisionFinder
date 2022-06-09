@@ -5,7 +5,7 @@
 # Adjust these macros for your particular system
 #   (default values are appropriate for GNU tools)
 CC = g++
-CFLAGS = -O3 -Wall -ansi --std=c++14
+CFLAGS = -O3 -Wpedantic -ansi --std=c++14
 # System-specific additional libraries
 LIBS = 
 # Destination directory for executables

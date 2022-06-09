@@ -2,9 +2,15 @@
 wx*/
 
 build/
+.vscode/
 
 # postscript output
 *.ps
+#html output
+*00?.html
+
+#random files showing up:
+.fuse_hidden*
 
 # Prerequisites
 *.d

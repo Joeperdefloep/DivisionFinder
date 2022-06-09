@@ -40,7 +40,6 @@ std::vector<std::vector<int>> find_cycles(int total){
     std::vector<std::vector<int>> cycles;
     std::set<int> to_check = non_prime_factors(total);
     
-    for(auto p:to_check){std::cout<<p<<", ";}
     int current = 1;
 
     while (!to_check.empty()){
@@ -62,38 +61,29 @@ std::vector<std::vector<int>> find_cycles(int total){
 }
 
 std::vector<int> find_cycle(int start, int total){
-    std::cout<<"finding cycle from: "<<start<<"/"<<total;
     int current = (start%2==0)?start/2:(total+start)/2;
     std::vector<int> cycle = {start};
     while (current!=start){
         cycle.push_back(current);
-        std::cout<<", "<<current<<"/"<<total;
-        // std::cout<<"current: "<<current<<", start:"<<start<<std::endl;
         current = (current%2==0)?current/2:(total+current)/2;
     }
-    std::cout<<std::endl;
     return cycle;
 }
 
-std::pair<int,int> find_fold(std::vector<int> cycle, std::set<int> to_fold){
-    std::cout<<" running find_fold with to_fold: ";
-    for(auto k: to_fold){std::cout<<k<<", ";}
-    for(size_t i=0;i<cycle.size();i++){
-        for(size_t j=0;j<i;j++){
-            if((cycle[i]+cycle[j])%2==0 && cycle[i]!=cycle[j]){
-                std::cout<<"trying fold "<<cycle[i]<<" to "<<cycle[j]<<": "<<(cycle[i]+cycle[j])/2<<std::endl;
-                if(to_fold.find((cycle[i]+cycle[j])/2) != to_fold.end()){
-                    std::cout<<"found fold!: ("<<cycle[i]<<", "<<cycle[j]<<")";
-                    return std::pair<int,int>(cycle[i],cycle[j]);
+std::pair<int,int> find_fold(std::vector<int>& folded, std::set<int>& to_fold){
+    for(size_t i=0;i<folded.size();i++){
+        for(size_t j=folded.size();j>i;j--){
+            if((folded[i]+folded[j])%2==0 && folded[i]!=folded[j]){
+                if(to_fold.find((folded[i]+folded[j])/2) != to_fold.end()){
+                    return std::pair<int,int>(folded[i],folded[j]);
                 }
             } else {
-                std::cout<<"could not fold"<<cycle[i]<<" onto "<<cycle[j]<<std::endl;
             }
         }
     }
     //Should not reach here: that means there is no possible fold
-    std::cout<< "big oops!, this should not happen!";
-    for(auto i:cycle){std::cerr<<i<<", ";}
+    std::cerr<< "big oops!, this should not happen! Could not find a fold!";
+    for(auto i:folded){std::cerr<<i<<", ";}
     throw;
 }
 } //namespace

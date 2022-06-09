@@ -568,6 +568,8 @@ private:
 public: 
   RefLine_L2L(RefLine* arl1, RefLine* arl2, short iroot, std::string aName);
   
+  const char GetLabel() const;
+
   bool UsesImmediate(RefBase* rb) const;
   void SequencePushSelf();
   bool PutHowto(std::ostream& os) const;
@@ -1181,10 +1183,8 @@ private:
   void DrawPaper();
   void DrawPt(const XYPt& aPt, PointStyle pstyle);
   void DrawLine(const XYPt& fromPt, const XYPt& toPt, LineStyle lstyle);
-  void DrawArc(const XYPt& ctr, double rad, double fromAngle,
-    double toAngle, bool ccw, LineStyle lstyle);
   void DrawPoly(const std::vector<XYPt>& poly, PolyStyle pstyle);
-  void DrawLabel(const std::string& aString, LabelStyle lstyle);
+  void DrawLabel(const XYPt& aPt, const std::string& aString, LabelStyle lstyle);
   void DrawFoldAndUnfoldArrow(const XYPt& fromPt, const XYPt& toPt);
   
 

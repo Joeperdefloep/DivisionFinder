@@ -250,7 +250,7 @@ int main()
       }
       case 3: {
         cout << endl << "In  how many divisions do you want to divide your paper? ";
-        int total;
+        size_t total;
         cin >> total;
         while (total%2==0){total=total/2;} // the algorithm breaks for multiples of 2
         cout<<"finding refences for: " << total << endl;
@@ -287,6 +287,7 @@ int main()
         cout << endl << "In  how many divisions do you want to divide your paper? ";
         int total;
         cin >> total;
+        while(total<=1){std::cout<<"please enter a number larger than 1: "; cin>>total;}
         while (total%2==0){total=total/2;} // the algorithm breaks for multiples of 2
         cout<<"finding refences for: " << total << endl;
         vector<vector<int>> cycles = DivisionFinder::find_cycles(total); //find all divisions that 
@@ -303,10 +304,10 @@ int main()
           }
         }
         sort(vls.begin(),vls.end(),CompareRankAndErrorDivision<RefLine>(total));
-        for (int i=0;i<=3;i++){
-          XYLine l(double(vls[i].first)/double(total));
-          cout<<"Found a very efficient one! at "<< vls[i].first<<"/"<<total<<"with error: "<<vls[i].second->DistanceTo(l)<<endl;
-        }
+        // for (size_t i=0;i<=vls.size();i++){
+        //   XYLine l(double(vls[i].first)/double(total));
+        //   cout<<"Found a very efficient one! at "<< vls[i].first<<"/"<<total<<"with error: "<<vls[i].second->DistanceTo(l)<<endl;
+        // }
 
         string fileName;
         fstream fout;
